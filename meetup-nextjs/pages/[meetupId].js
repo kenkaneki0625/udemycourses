@@ -1,48 +1,63 @@
 import {Fragment} from 'react';
 import MeetupDetail from '../components/meetups/MeetupDetails';
+import { MongoClient, ObjectId} from "mongodb";
 
-export default function MeetupDetails(){
+export default function MeetupDetails(props){
+
     return(
         
         <MeetupDetail
-            image="https://us.123rf.com/450wm/vichie81/vichie811508/vichie81150800164/44510493-grand-place-brussels-belgium-at-dusk-.jpg?ver=6"
-            title='first meetup'
-            address='some street'
-            description='Some description'
+            image={props.meetupData.image}
+            title={props.meetupData.title}
+            address={props.meetupData.address}
+            description={props.meetupData.description}
         />
     )
 }
 
 export async function getStaticPaths() {
+
+    const client = await MongoClient.connect('mongodb+srv://Shaon:<password>@emaily.frhls.mongodb.net/myFirstDatabase?retryWrites=true&w=majority');
+
+    const db = client.db();
+
+    const meetupsCollection = db.collection('meetups');
+
+    const meetups = await meetupsCollection.find({}, {_id:1}).toArray();
+
+    client.close();
+
+
     return {
         fallback: false,
-        paths: [
-            {
-            params:{
-                meetupId: 'm1'
-            }
-        },
-        {
-            params:{
-                meetupId: 'm2'
-            }
-        },
+        paths: meetups.map(meetup => ({ params : { meetupId : meetup._id.toString()}}))
         
-    ]
     }
 }
 
 export async function getStaticProps(context){
 
     const meetupId = context.params.meetupId
+
+    const client = await MongoClient.connect('mongodb+srv://Shaon:<password>@emaily.frhls.mongodb.net/myFirstDatabase?retryWrites=true&w=majority');
+    
+    const db = client.db();
+
+    const meetupsCollection = db.collection('meetups');
+
+    const selectedmeetup = await meetupsCollection.findOne({_id: ObjectId(meetupId)});
+
+    client.close();
+
+
     return {
         props:{
             meetupData : {
-                id : meetupId,
-                image : "https://us.123rf.com/450wm/vichie81/vichie811508/vichie81150800164/44510493-grand-place-brussels-belgium-at-dusk-.jpg?ver : 6",
-                title : 'first meetup',
-                address : 'some street',
-                description : 'Some description',
+                id : selectedmeetup._id.toString(),
+                title : selectedmeetup.title,
+                address : selectedmeetup.address,
+                image : selectedmeetup.image,
+                description : selectedmeetup.description
             }
         },
         revalidate : 3600
